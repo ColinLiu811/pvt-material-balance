@@ -202,6 +202,13 @@ class MaterialBalance:
         return bool(np.allclose(rs, rs[0]))
 
     @property
+    def initially_saturated(self) -> bool:
+        """True when Rs falls from the first production step (pi <= pb), the
+        only situation in which an initial gas cap can exist."""
+        rs = self.history["rs"].to_numpy()
+        return bool(self.has_gas_data and rs[1] < rs[0])
+
+    @property
     def has_gas_data(self) -> bool:
         return not self.history["bg"].isna().any()
 
