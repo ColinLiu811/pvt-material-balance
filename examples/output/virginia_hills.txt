@@ -1,0 +1,15 @@
+Drive mechanism : undersaturated oil expansion
+Campbell plot   : hump (F/Et varies 39.9% across the history)
+Drive indices   : DDI 0.57, SDI 0.00, WDI -0.00, EDI 0.42  (latest point)
+
+Method      : F vs Et (undersaturated)
+OOIP N      : 282.83 MMSTB  (+/- 5.61)
+Gas cap m   : 0.0000
+R^2         : 0.99569  (12 points)
+
+Models compared (R^2 of F):
+  volumetric   N =    282.83 MMSTB   R^2 = 0.99169
+Note: Campbell plot is not flat (hump) but no alternative model explains it clearly better; check PVT, pressures, compressibility and the assumed m
+Note: no time column: the Schilthuis aquifer model was not tried
+
+wrote plots to examples/output/virginia_hills/

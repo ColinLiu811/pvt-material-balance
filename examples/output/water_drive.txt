@@ -1,0 +1,15 @@
+Drive mechanism : water drive
+Campbell plot   : rising (F/Et varies 38.4% across the history)
+Drive indices   : DDI 0.08, SDI 0.00, WDI 0.91, EDI 0.01  (latest point)
+
+Method      : F/Et vs W/Et (schilthuis aquifer)
+OOIP N      : 90.00 MMSTB  (+/- 0.00)
+Gas cap m   : 0.0000
+Aquifer     : schilthuis, C = 60 (+/- 0.000168), We = 279.10 MMrb at last point
+R^2         : 1.00000  (20 points)
+
+Models compared (R^2 of F):
+  volumetric   N =    994.72 MMSTB   R^2 = 0.99323
+  schilthuis   N =     90.00 MMSTB   R^2 = 1.00000
+
+wrote plots to examples/output/water_drive/

@@ -1,0 +1,79 @@
+== Oil correlations vs lab data (Ahmed, six crudes) ==
+     rsb_lab  rs_standing  rs_vb  bob_lab  bo_standing  bo_vb  pb_lab  pb_standing  pb_vb
+oil                                                                                      
+1        751        831.9  753.6    1.528        1.506  1.477   2,377        2,182  2,370
+2        768          811  727.7    1.474        1.487   1.45   2,620        2,503  2,742
+3        693        767.3  696.3    1.529        1.495  1.451   2,051        1,883  2,043
+4        968        908.7  821.5    1.619        1.635   1.55   2,884        3,041  3,312
+5        943        1,014  909.9     1.57        1.571   1.55   3,065        2,885  3,159
+6        807        993.8  852.7    1.385        1.461  1.389   4,239        3,562  4,031
+
+property correlation  AARE_%  max_%
+      rs    standing   10.64  23.15
+      rs          vb   5.061  15.13
+      bo    standing   1.849  5.463
+      bo          vb   2.641  5.109
+      pb    standing   8.029  15.97
+      pb          vb   4.687  14.82
+
+== z-factor: Hall-Yarborough vs Dranchuk-Abou-Kassem ==
+ Tpr  ppr   z_HY  z_DAK   diff_%
+ 1.2  0.5 0.8924 0.8951  -0.2956
+ 1.2    1 0.7761 0.7784  -0.2977
+ 1.2    2 0.5616 0.5527    1.605
+ 1.2    3 0.5305 0.5302  0.05725
+ 1.2    5 0.6943 0.6973  -0.4285
+ 1.2    8 0.9849  0.987  -0.2099
+ 1.2   12  1.367  1.363   0.2455
+ 1.5  0.5 0.9497 0.9509  -0.1316
+ 1.5    1 0.9018 0.9034  -0.1752
+ 1.5    2 0.8208 0.8215 -0.07686
+ 1.5    3 0.7748 0.7761  -0.1674
+ 1.5    5 0.8068 0.8091  -0.2833
+ 1.5    8 0.9912 0.9889   0.2228
+ 1.5   12  1.279  1.274   0.3663
+   2  0.5 0.9838 0.9825   0.1374
+   2    1 0.9697 0.9674   0.2426
+   2    2 0.9489 0.9459   0.3136
+   2    3 0.9396 0.9376   0.2082
+   2    5 0.9582 0.9595  -0.1335
+   2    8  1.056  1.057  -0.1577
+   2   12   1.24   1.24 0.002187
+   3  0.5      1 0.9984   0.1979
+   3    1  1.002 0.9983   0.3513
+   3    2  1.008  1.002   0.5363
+   3    3  1.017  1.011   0.5848
+   3    5  1.047  1.043   0.4203
+   3    8  1.114  1.114 -0.04312
+   3   12  1.225  1.232  -0.5938
+mean |diff| = 0.30%   max |diff| = 1.61%
+
+== Havlena-Odeh: Virginia Hills Beaverhill Lake (Ahmed) ==
+    p  F_Mbbl     Eo    Eo+Efw
+3,680   26.84 0.0002 0.0002502
+3,676   45.54 0.0002 0.0002903
+3,667   102.9 0.0003 0.0004806
+3,664   133.5 0.0003 0.0005107
+3,640   282.7 0.0007  0.001151
+3,605   478.2 0.0014  0.002203
+3,567   712.7  0.002  0.003184
+3,515   1,106 0.0026  0.004305
+3,448   1,675 0.0028  0.005177
+3,360   2,230 0.0048   0.00806
+3,275   2,806 0.0058  0.009913
+3,188   3,400 0.0068   0.01179
+
+Drive mechanism : undersaturated oil expansion
+Campbell plot   : hump (F/Et varies 39.9% across the history)
+Drive indices   : DDI 0.57, SDI 0.00, WDI -0.00, EDI 0.42  (latest point)
+
+Method      : F vs Et (undersaturated)
+OOIP N      : 282.83 MMSTB  (+/- 5.61)
+Gas cap m   : 0.0000
+R^2         : 0.99569  (12 points)
+
+Models compared (R^2 of F):
+  volumetric   N =    282.83 MMSTB   R^2 = 0.99169
+Note: Campbell plot is not flat (hump) but no alternative model explains it clearly better; check PVT, pressures, compressibility and the assumed m
+Note: no time column: the Schilthuis aquifer model was not tried
+Book answer: N ~ 257 MMSTB (line drawn by eye); volumetric estimate 270.6 MMSTB.
