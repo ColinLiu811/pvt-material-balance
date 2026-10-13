@@ -13,6 +13,8 @@ References
   mixtures of California oils and gases. Drilling & Production Practice, API.
 - Vasquez, M. & Beggs, H.D. (1980). Correlations for fluid physical property
   prediction. JPT 32(6).
+- Beggs, H.D. & Robinson, J.R. (1975). Estimating the viscosity of crude oil
+  systems. JPT 27(9).
 """
 
 from __future__ import annotations
@@ -149,3 +151,37 @@ def bo_undersaturated(p, pb, bob, rsb, api, gas_gravity_sep, t_degf):
     """
     a = _vb_compressibility_numerator(rsb, api, gas_gravity_sep, t_degf)
     return _out(np.asarray(bob) * (np.asarray(pb) / np.asarray(p, dtype=float)) ** a)
+
+
+# ---------------------------------------------------------------------------
+# Viscosity: Beggs-Robinson (1975) below pb, Vasquez-Beggs above pb
+# ---------------------------------------------------------------------------
+
+def mu_dead_beggs_robinson(api, t_degf):
+    """Gas-free (dead) oil viscosity in cp.
+
+    mu_od = 10^x - 1,  x = T^-1.163 exp(6.9824 - 0.04658 API)
+    """
+    x = np.asarray(t_degf, dtype=float) ** -1.163 * np.exp(6.9824 - 0.04658 * np.asarray(api))
+    return _out(10.0**x - 1.0)
+
+
+def mu_live_beggs_robinson(mu_dead, rs):
+    """Gas-saturated (live) oil viscosity in cp.
+
+    mu_o = A mu_od^B,  A = 10.715 (Rs + 100)^-0.515,  B = 5.44 (Rs + 150)^-0.338
+    """
+    rs = np.asarray(rs, dtype=float)
+    a = 10.715 * (rs + 100.0) ** -0.515
+    b = 5.44 * (rs + 150.0) ** -0.338
+    return _out(a * np.asarray(mu_dead) ** b)
+
+
+def mu_undersaturated_vasquez_beggs(p, pb, mu_ob):
+    """Undersaturated oil viscosity in cp, p >= pb.
+
+    mu_o = mu_ob (p / pb)^m,  m = 2.6 p^1.187 exp(-11.513 - 8.98e-5 p)
+    """
+    p = np.asarray(p, dtype=float)
+    m = 2.6 * p**1.187 * np.exp(-11.513 - 8.98e-5 * p)
+    return _out(np.asarray(mu_ob) * (p / np.asarray(pb)) ** m)
