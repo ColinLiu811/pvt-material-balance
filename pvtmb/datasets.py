@@ -23,3 +23,21 @@ AHMED_CRUDES = pd.DataFrame(
     columns=["temp", "pb", "rsb", "bob", "api", "gas_gravity"],
     index=pd.Index(range(1, 7), name="oil"),
 )
+
+
+# Virginia Hills Beaverhill Lake field: a volumetric, undersaturated oil
+# reservoir (Ahmed, "Reservoir Engineering Handbook", ch. 11, Havlena-Odeh
+# example). pb = 1500 psia, Swi = 0.24, cw = 3.62e-6 1/psi,
+# cf = 4.95e-6 1/psi, Bw = 1.0. Published answer: N ~ 257 MMSTB (the
+# volumetric estimate is 270.6 MMSTB).
+# Production is converted from MSTB to STB.
+VIRGINIA_HILLS = pd.DataFrame({
+    "p": [3685, 3680, 3676, 3667, 3664, 3640, 3605, 3567, 3515, 3448, 3360, 3275, 3188],
+    "np": [x * 1e3 for x in (0.0, 20.481, 34.750, 78.557, 101.846, 215.681, 364.613,
+                             542.985, 841.591, 1273.530, 1691.887, 2127.077, 2575.330)],
+    "wp": [x * 1e3 for x in (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                             0.159, 0.805, 2.579, 5.008, 6.500, 8.000)],
+    "bo": [1.3102, 1.3104, 1.3104, 1.3105, 1.3105, 1.3109, 1.3116,
+           1.3122, 1.3128, 1.3130, 1.3150, 1.3160, 1.3170],
+}).astype(float)
+VIRGINIA_HILLS_PARAMS = {"swi": 0.24, "cw": 3.62e-6, "cf": 4.95e-6}
