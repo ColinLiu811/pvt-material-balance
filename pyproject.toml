@@ -24,4 +24,5 @@ pvtmb = "pvtmb.cli:main"
 include = ["pvtmb*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "pvtmb"]
+addopts = "--doctest-modules"
