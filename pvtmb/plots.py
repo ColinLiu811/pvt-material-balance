@@ -30,6 +30,8 @@ def plot_pvt(table: pd.DataFrame, pb: float | None = None, title: str = "", path
     sat = table["p"] <= (pb if pb else np.inf)
     ax.plot(p[sat], table["bt"][sat], color="#DD8452", ls="--", label="Bt")
     ax.set_ylabel("FVF [rb/STB]")
+    # Bt explodes at low pressure; keep Bo readable
+    ax.set_ylim(0.95 * table["bo"].min(), min(table["bt"].max(), 2.5 * table["bo"].max()) * 1.02)
     ax.legend()
     ax = axes[1, 0]
     ax.plot(p, table["mu_o"], color="#4C72B0", label="oil")
@@ -42,7 +44,8 @@ def plot_pvt(table: pd.DataFrame, pb: float | None = None, title: str = "", path
     ax.set_ylabel("z-factor", color="#8172B3")
     ax2 = ax.twinx()
     ax2.plot(p, table["bg"] * 1e3, color="#C44E52")
-    ax2.set_ylabel("Bg [rb/Mscf]", color="#C44E52")
+    ax2.set_yscale("log")
+    ax2.set_ylabel("Bg [rb/Mscf, log]", color="#C44E52")
     for ax in axes.flat:
         ax.grid(alpha=0.3)
         if pb:
@@ -85,8 +88,13 @@ def plot_campbell(diagnosis: DriveDiagnosis, path=None):
     if (~c.used).any():
         ax.scatter(c.x[~c.used] / 1e6, c.y[~c.used] / 1e6, facecolor="none",
                    edgecolor="grey", label="excluded (tiny Et)")
-    ax.axhline(diagnosis.result.N / 1e6, color="#C44E52", ls="--",
-               label=f"fitted N = {diagnosis.result.N / 1e6:,.1f} MMSTB")
+    # the Campbell plot tests the volumetric model, so compare with its N
+    vol = diagnosis.alternatives.get("volumetric")
+    if vol is None and diagnosis.result.aquifer is None:
+        vol = diagnosis.result
+    if vol is not None:
+        ax.axhline(vol.N / 1e6, color="#C44E52", ls="--",
+                   label=f"volumetric fit N = {vol.N / 1e6:,.1f} MMSTB")
     ax.set_xlabel("F [MMrb]")
     ax.set_ylabel("F / Et [MMSTB]")
     ax.set_title(f"Campbell plot - {c.trend}")
@@ -99,7 +107,7 @@ def plot_campbell(diagnosis: DriveDiagnosis, path=None):
 def plot_drive_indices(diagnosis: DriveDiagnosis, path=None):
     """Stacked drive indices against pressure (production runs left to right)."""
     idx = diagnosis.indices
-    fig, ax = plt.subplots(figsize=(7, 4.5))
+    fig, ax = plt.subplots(figsize=(7.5, 5))
     cols = [c for c in ("DDI", "SDI", "WDI", "EDI") if (idx[c].abs() > 1e-6).any()]
     ax.stackplot(np.arange(len(idx)), *[idx[c].clip(lower=0) for c in cols],
                  labels=[_INDEX_LABELS[c] for c in cols],
@@ -110,7 +118,8 @@ def plot_drive_indices(diagnosis: DriveDiagnosis, path=None):
     ax.set_ylabel("Fraction of withdrawal")
     ax.set_ylim(0, max(1.05, float(idx[cols].clip(lower=0).sum(axis=1).max()) * 1.02))
     ax.set_title(f"Drive indices - {diagnosis.mechanism}")
-    ax.legend(loc="lower left", fontsize=8)
+    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.22), ncol=len(cols), fontsize=8,
+              frameon=False)
     fig.tight_layout()
     return _finish(fig, path)
 
