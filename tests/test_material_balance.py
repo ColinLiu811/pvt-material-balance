@@ -147,3 +147,49 @@ def test_column_names_are_case_insensitive():
     df = VIRGINIA_HILLS.rename(columns=str.upper)
     res = MaterialBalance(df, **VIRGINIA_HILLS_PARAMS).fit()
     assert res.N == pytest.approx(MaterialBalance(VIRGINIA_HILLS, **VIRGINIA_HILLS_PARAMS).fit().N)
+
+
+# ---------------------------------------------------------------------------
+# Water drive
+# ---------------------------------------------------------------------------
+
+def _water_drive_history(fluid, *, N, C, model, m=0.0, n=14):
+    from pvtmb.aquifer import influx_function
+
+    p = np.linspace(fluid.pb if m else 4200.0, 2400.0 if not m else 2000.0, n)
+    t = np.linspace(0.0, 3650.0, n)
+    we = C * influx_function(model, p, t)
+    return synthetic_history(fluid, N=N, m=m, pressures=p, we=we, t=t, swi=0.22)
+
+
+@pytest.mark.parametrize("model,C", [("pot", 4.0e4), ("schilthuis", 25.0)])
+def test_recovers_N_and_aquifer_constant(model, C):
+    fluid = BlackOil(api=30.0, gas_gravity=0.8, temperature=180.0, pb=2600.0)
+    hist = _water_drive_history(fluid, N=90e6, C=C, model=model)
+    res = MaterialBalance(hist, swi=0.22).fit(m=0, aquifer=model)
+    assert res.N == pytest.approx(90e6, rel=1e-6)
+    assert res.aquifer_constant == pytest.approx(C, rel=1e-6)
+    assert res.We[0] == 0.0 and res.We[-1] > 0
+    assert "aquifer" in res.summary()
+
+
+def test_water_drive_with_unknown_gas_cap():
+    fluid = BlackOil(api=30.0, gas_gravity=0.8, temperature=180.0, pb=3200.0)
+    hist = _water_drive_history(fluid, N=90e6, C=30.0, model="schilthuis", m=0.25)
+    res = MaterialBalance(hist, swi=0.22).fit(m="estimate", aquifer="schilthuis")
+    assert res.N == pytest.approx(90e6, rel=1e-6)
+    assert res.m == pytest.approx(0.25, rel=1e-6)
+    assert res.aquifer_constant == pytest.approx(30.0, rel=1e-6)
+
+
+def test_ignoring_aquifer_overstates_N():
+    fluid = BlackOil(api=30.0, gas_gravity=0.8, temperature=180.0, pb=2600.0)
+    hist = _water_drive_history(fluid, N=90e6, C=4.0e4, model="pot")
+    assert MaterialBalance(hist, swi=0.22).fit(m=0).N > 1.2 * 90e6
+
+
+def test_schilthuis_needs_time():
+    fluid = BlackOil(api=30.0, gas_gravity=0.8, temperature=180.0, pb=2600.0)
+    hist = _water_drive_history(fluid, N=90e6, C=25.0, model="schilthuis").drop(columns="t")
+    with pytest.raises(ValueError, match="time"):
+        MaterialBalance(hist, swi=0.22).fit(aquifer="schilthuis")

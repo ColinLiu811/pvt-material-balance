@@ -31,7 +31,8 @@ from dataclasses import dataclass, field
 import numpy as np
 import pandas as pd
 
-from .numerics import LinearFit, fit_line
+from . import aquifer as aq
+from .numerics import LinearFit, fit_line, lstsq
 
 # history columns (field units): p psia, np STB, gp scf, wp STB, bo rb/STB,
 # rs scf/STB, bg rb/scf, bw rb/STB, winj STB, ginj scf, t days
@@ -140,7 +141,15 @@ class MBResult:
     ylabel: str
     N_stderr: float = float("nan")
     m_stderr: float = float("nan")
+    aquifer: str | None = None
+    aquifer_constant: float = 0.0
+    aquifer_constant_stderr: float = float("nan")
+    We: np.ndarray | None = None
     notes: list[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        if self.We is None:
+            self.We = np.zeros(len(self.terms))
 
     @property
     def Et(self) -> np.ndarray:
@@ -155,6 +164,10 @@ class MBResult:
             f"Gas cap m   : {self.m:.4f}" + (f"  (+/- {self.m_stderr:.4f})" if np.isfinite(self.m_stderr) else ""),
             f"R^2         : {self.fit.r2:.5f}  ({self.fit.n} points)",
         ]
+        if self.aquifer:
+            lines.insert(3, f"Aquifer     : {self.aquifer}, C = {self.aquifer_constant:,.4g} "
+                            f"(+/- {self.aquifer_constant_stderr:,.3g}), "
+                            f"We = {self.We[-1] / 1e6:,.2f} MMrb at last point")
         lines += [f"Note        : {n}" for n in self.notes]
         return "\n".join(lines)
 
@@ -196,25 +209,43 @@ class MaterialBalance:
         # the initial row is 0 = N * 0 and carries no information
         return self.terms.iloc[1:]
 
-    def fit(self, m: float | str = 0.0) -> MBResult:
-        """Estimate OOIP for a reservoir without water influx.
+    def influx_function(self, model: str) -> np.ndarray:
+        """Aquifer influx function W for every history row (see :mod:`pvtmb.aquifer`)."""
+        t = self.history["t"].to_numpy() if "t" in self.history else None
+        return aq.influx_function(model, self.history["p"].to_numpy(), t)
+
+    def fit(self, m: float | str = 0.0, aquifer: str | None = None) -> MBResult:
+        """Estimate OOIP (and gas-cap size / aquifer strength).
 
         ``m`` is the known gas-cap ratio (0 for no gas cap) or ``"estimate"``.
+        ``aquifer`` is ``None`` (volumetric) or an influx model name from
+        :mod:`pvtmb.aquifer`.
 
-        - known m: F = N Et, a line through the origin with slope N.
-        - unknown m: F / E1 = N + N m (E2 / E1) with E1 = Eo + Ef and
-          E2 = Eg + Ef, a line with intercept N and slope N m.
+        ==============  ==========  ===========================================
+        m               aquifer     straight line
+        ==============  ==========  ===========================================
+        known           none        F = N Et, through the origin, slope N
+        "estimate"      none        F/E1 = N + Nm E2/E1, intercept N, slope Nm
+        known           model       F/Et = N + C W/Et, intercept N, slope C
+        "estimate"      model       F = N E1 + Nm E2 + C W (multiple regression)
+        ==============  ==========  ===========================================
+
+        with E1 = Eo + Ef and E2 = Eg + Ef, so that Et = E1 + m E2.
         """
-        if (isinstance(m, str) or m) and not self.has_gas_data:
+        estimate_m = isinstance(m, str)
+        if estimate_m and m != "estimate":
+            raise ValueError("m must be a number or 'estimate'")
+        if (estimate_m or m) and not self.has_gas_data:
             raise ValueError("a gas-cap fit needs Bg in the history (or a fluid model)")
+        if aquifer is not None:
+            return self._fit_water_drive(m, aquifer)
+
         t = self._rows()
         F = t["F"].to_numpy()
         E1 = (t["Eo"] + t["Ef"]).to_numpy()
         E2 = (t["Eg"] + t["Ef"]).to_numpy()
 
-        if isinstance(m, str):
-            if m != "estimate":
-                raise ValueError("m must be a number or 'estimate'")
+        if estimate_m:
             x, y = E2 / E1, F / E1
             line = fit_line(x, y)
             N, mN = line.intercept, line.slope
@@ -233,3 +264,33 @@ class MaterialBalance:
         return MBResult(N=line.slope, m=float(m), method=label, fit=line, terms=self.terms,
                         x=Et, y=F, xlabel="Et = Eo + m Eg + Efw  [rb/STB]", ylabel="F  [rb]",
                         N_stderr=line.stderr[0])
+
+    def _fit_water_drive(self, m, model: str) -> MBResult:
+        W_all = self.influx_function(model)
+        t = self._rows()
+        W = W_all[1:]
+        F = t["F"].to_numpy()
+        E1 = (t["Eo"] + t["Ef"]).to_numpy()
+        E2 = (t["Eg"] + t["Ef"]).to_numpy()
+
+        if isinstance(m, str):
+            reg = lstsq(np.column_stack([E1, E2, W]), F, centered_r2=False)
+            N, mN, C = reg.coef
+            m_hat = mN / N
+            m_err = abs(m_hat) * np.hypot(reg.stderr[1] / mN, reg.stderr[0] / N) if mN else np.nan
+            return MBResult(N=N, m=m_hat, method=f"F = N E1 + Nm E2 + C W ({model} aquifer, m estimated)",
+                            fit=reg, terms=self.terms, x=F - C * W, y=F,
+                            xlabel="F - We  [rb]", ylabel="F  [rb]",
+                            N_stderr=reg.stderr[0], m_stderr=m_err, aquifer=model,
+                            aquifer_constant=C, aquifer_constant_stderr=reg.stderr[2],
+                            We=C * W_all)
+
+        Et = E1 + m * E2
+        x, y = W / Et, F / Et
+        line = fit_line(x, y)
+        C = line.slope
+        return MBResult(N=line.intercept, m=float(m), method=f"F/Et vs W/Et ({model} aquifer)",
+                        fit=line, terms=self.terms, x=x, y=y,
+                        xlabel=f"W / Et  ({model} influx function)", ylabel="F / Et  [STB]",
+                        N_stderr=line.stderr[0], aquifer=model, aquifer_constant=C,
+                        aquifer_constant_stderr=line.stderr[1], We=C * W_all)
